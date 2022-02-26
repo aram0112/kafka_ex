@@ -64,12 +64,14 @@ defmodule KafkaEx.Server0P8P2 do
       raise InvalidConsumerGroupError, consumer_group
     end
 
+    auth = Keyword.get(args, :auth, nil)
+
     brokers =
       Enum.map(uris, fn {host, port} ->
         %Broker{
           host: host,
           port: port,
-          socket: NetworkClient.create_socket(host, port)
+          socket: NetworkClient.create_socket(host, port, [], false, auth)
         }
       end)
 
@@ -98,8 +100,7 @@ defmodule KafkaEx.Server0P8P2 do
     # Get the initial "real" broker list and start a regular refresh cycle.
     state = update_metadata(state)
 
-    {:ok, _} =
-      :timer.send_interval(state.metadata_update_interval, :update_metadata)
+    {:ok, _} = :timer.send_interval(state.metadata_update_interval, :update_metadata)
 
     if consumer_group?(state) do
       # If we are using consumer groups then initialize the state and start the update cycle
@@ -226,17 +227,14 @@ defmodule KafkaEx.Server0P8P2 do
       ) do
     Logger.log(
       :error,
-      "Fetching consumer_group #{consumer_group} metadata failed with error_code #{
-        inspect(error_code)
-      }"
+      "Fetching consumer_group #{consumer_group} metadata failed with error_code #{inspect(error_code)}"
     )
 
     {%ConsumerMetadataResponse{error_code: error_code}, state}
   end
 
   def update_consumer_metadata(
-        %State{consumer_group: consumer_group, correlation_id: correlation_id} =
-          state,
+        %State{consumer_group: consumer_group, correlation_id: correlation_id} = state,
         retry,
         _error_code
       ) do
@@ -309,8 +307,7 @@ defmodule KafkaEx.Server0P8P2 do
 
     # if the request has a specific consumer group, use that
     # otherwise use the worker's consumer group
-    consumer_group =
-      offset_commit_request.consumer_group || state.consumer_group
+    consumer_group = offset_commit_request.consumer_group || state.consumer_group
 
     offset_commit_request = %{
       offset_commit_request
@@ -356,11 +353,9 @@ defmodule KafkaEx.Server0P8P2 do
       nil ->
         {_, updated_state} = update_consumer_metadata(state)
 
-        default_broker =
-          if use_first_as_default, do: hd(state.brokers), else: nil
+        default_broker = if use_first_as_default, do: hd(state.brokers), else: nil
 
-        {broker_for_consumer_group(updated_state) || default_broker,
-         updated_state}
+        {broker_for_consumer_group(updated_state) || default_broker, updated_state}
 
       broker ->
         {broker, state}

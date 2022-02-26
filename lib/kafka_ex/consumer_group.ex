@@ -333,6 +333,7 @@ defmodule KafkaEx.ConsumerGroup do
         assignments,
         opts
       ) do
+
     child =
       supervisor(
         KafkaEx.GenConsumer.Supervisor,

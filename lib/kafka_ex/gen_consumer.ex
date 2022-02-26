@@ -461,8 +461,7 @@ defmodule KafkaEx.GenConsumer do
           options
         ) :: GenServer.on_start()
   def start_link(consumer_module, group_name, topic, partition, opts \\ []) do
-    {server_opts, consumer_opts} =
-      Keyword.split(opts, [:debug, :name, :timeout, :spawn_opt])
+    {server_opts, consumer_opts} = Keyword.split(opts, [:debug, :name, :timeout, :spawn_opt])
 
     GenServer.start_link(
       __MODULE__,
@@ -548,7 +547,7 @@ defmodule KafkaEx.GenConsumer do
 
     case consumer_module.init(topic, partition, extra_consumer_args) do
       {:ok, consumer_state} ->
-        worker_opts = Keyword.take(opts, [:uris, :use_ssl, :ssl_options])
+        worker_opts = Keyword.take(opts, [:uris, :use_ssl, :ssl_options, :auth])
 
         {:ok, worker_name} =
           KafkaEx.create_worker(
@@ -563,8 +562,7 @@ defmodule KafkaEx.GenConsumer do
 
         given_fetch_options = Keyword.get(opts, :fetch_options, [])
 
-        fetch_options =
-          Keyword.merge(default_fetch_options, given_fetch_options)
+        fetch_options = Keyword.merge(default_fetch_options, given_fetch_options)
 
         state = %State{
           consumer_module: consumer_module,
@@ -810,9 +808,7 @@ defmodule KafkaEx.GenConsumer do
           KafkaEx.latest_offset(topic, partition, worker_name)
 
         _ ->
-          raise "Offset out of range while consuming topic #{topic}, partition #{
-                  partition
-                }."
+          raise "Offset out of range while consuming topic #{topic}, partition #{partition}."
       end
 
     %State{

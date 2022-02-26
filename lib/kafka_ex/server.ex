@@ -373,9 +373,7 @@ defmodule KafkaEx.Server do
       def terminate(reason, state) do
         Logger.log(
           :debug,
-          "Shutting down worker #{inspect(state.worker_name)}, reason: #{
-            inspect(reason)
-          }"
+          "Shutting down worker #{inspect(state.worker_name)}, reason: #{inspect(reason)}"
         )
 
         if state.event_pid do
@@ -396,8 +394,7 @@ defmodule KafkaEx.Server do
           ) do
         correlation_id = state.correlation_id + 1
 
-        produce_request =
-          default_partitioner().assign_partition(produce_request, metadata)
+        produce_request = default_partitioner().assign_partition(produce_request, metadata)
 
         produce_request_data =
           try do
@@ -448,8 +445,7 @@ defmodule KafkaEx.Server do
                   state.api_versions
                 )
 
-              state =
-                update_metadata(%{state | correlation_id: retrieved_corr_id})
+              state = update_metadata(%{state | correlation_id: retrieved_corr_id})
 
               {
                 MetadataResponse.broker_for_topic(
@@ -471,9 +467,7 @@ defmodule KafkaEx.Server do
             nil ->
               Logger.log(
                 :error,
-                "kafka_server_produce_send_request: leader for topic #{
-                  produce_request.topic
-                }/#{produce_request.partition} is not available"
+                "kafka_server_produce_send_request: leader for topic #{produce_request.topic}/#{produce_request.partition} is not available"
               )
 
               :leader_not_available
@@ -607,14 +601,12 @@ defmodule KafkaEx.Server do
 
         metadata_brokers =
           metadata.brokers
-          |> Enum.map(
-            &%{&1 | is_controller: &1.node_id == metadata.controller_id}
-          )
+          |> Enum.map(&%{&1 | is_controller: &1.node_id == metadata.controller_id})
 
         brokers =
           state.brokers
           |> remove_stale_brokers(metadata_brokers)
-          |> add_new_brokers(metadata_brokers, state.ssl_options, state.use_ssl)
+          |> add_new_brokers(metadata_brokers, state.ssl_options, state.use_ssl, state.auth)
 
         %{
           state
@@ -678,9 +670,7 @@ defmodule KafkaEx.Server do
           ) do
         Logger.log(
           :error,
-          "Metadata request for topic #{inspect(topic)} failed with error_code #{
-            inspect(error_code)
-          }"
+          "Metadata request for topic #{inspect(topic)} failed with error_code #{inspect(error_code)}"
         )
 
         {correlation_id, %Metadata.Response{}}
@@ -730,10 +720,7 @@ defmodule KafkaEx.Server do
               )
           end
         else
-          message =
-            "Unable to fetch metadata from any brokers. Timeout is #{
-              sync_timeout
-            }."
+          message = "Unable to fetch metadata from any brokers. Timeout is #{sync_timeout}."
 
           Logger.log(:error, message)
           raise message
@@ -862,9 +849,7 @@ defmodule KafkaEx.Server do
         case broker do
           nil ->
             Logger.error(fn ->
-              "network_request: leader for topic #{request.topic}/#{
-                request.partition
-              } is not available"
+              "network_request: leader for topic #{request.topic}/#{request.partition} is not available"
             end)
 
             {{:error, :topic_not_found}, updated_state}
@@ -891,15 +876,11 @@ defmodule KafkaEx.Server do
                   rescue
                     _ ->
                       Logger.error(
-                        "Failed to parse a response from the server: #{
-                          inspect(response)
-                        }"
+                        "Failed to parse a response from the server: #{inspect(response)}"
                       )
 
                       Kernel.reraise(
-                        "Parse error during #{inspect(module)}.parse_response. Couldn't parse: #{
-                          inspect(response)
-                        }",
+                        "Parse error during #{inspect(module)}.parse_response. Couldn't parse: #{inspect(response)}",
                         System.stacktrace()
                       )
                   end
@@ -932,9 +913,7 @@ defmodule KafkaEx.Server do
             Enum.each(brokers_to_remove, fn broker ->
               Logger.log(
                 :debug,
-                "Closing connection to broker #{broker.node_id}: #{
-                  inspect(broker.host)
-                } on port #{inspect(broker.port)}"
+                "Closing connection to broker #{broker.node_id}: #{inspect(broker.host)} on port #{inspect(broker.port)}"
               )
 
               NetworkClient.close_socket(broker.socket)
@@ -950,15 +929,14 @@ defmodule KafkaEx.Server do
              brokers,
              [metadata_broker | metadata_brokers],
              ssl_options,
-             use_ssl
+             use_ssl,
+             auth
            ) do
         case Enum.find(brokers, &(metadata_broker.node_id == &1.node_id)) do
           nil ->
             Logger.log(
               :debug,
-              "Establishing connection to broker #{metadata_broker.node_id}: #{
-                inspect(metadata_broker.host)
-              } on port #{inspect(metadata_broker.port)}"
+              "Establishing connection to broker #{metadata_broker.node_id}: #{inspect(metadata_broker.host)} on port #{inspect(metadata_broker.port)}"
             )
 
             add_new_brokers(
@@ -970,18 +948,20 @@ defmodule KafkaEx.Server do
                         metadata_broker.host,
                         metadata_broker.port,
                         ssl_options,
-                        use_ssl
+                        use_ssl,
+                        auth
                       )
                 }
                 | brokers
               ],
               metadata_brokers,
               ssl_options,
-              use_ssl
+              use_ssl,
+              auth
             )
 
           _ ->
-            add_new_brokers(brokers, metadata_brokers, ssl_options, use_ssl)
+            add_new_brokers(brokers, metadata_brokers, ssl_options, use_ssl, auth)
         end
       end
 
@@ -1007,9 +987,7 @@ defmodule KafkaEx.Server do
         Application.get_env(:kafka_ex, :partitioner, KafkaEx.DefaultPartitioner)
       end
 
-      defp increment_state_correlation_id(
-             %_{correlation_id: correlation_id} = state
-           ) do
+      defp increment_state_correlation_id(%_{correlation_id: correlation_id} = state) do
         %{state | correlation_id: correlation_id + 1}
       end
     end
