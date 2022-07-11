@@ -21,11 +21,7 @@ defmodule KafkaEx.NetworkClient do
           "Successfully connected to broker #{inspect(host)}:#{inspect(port)}"
         )
 
-        if handle_auth(socket, auth) do
-          socket
-        else
-          nil
-        end
+        handle_auth(socket, auth)
 
       err ->
         Logger.log(
@@ -103,8 +99,8 @@ defmodule KafkaEx.NetworkClient do
           end
         end
 
-      _ ->
-        nil
+      nil ->
+        socket
     end
   end
 
